@@ -83,7 +83,8 @@ Type=simple
 
 EnvironmentFile=/opt/Stirling-PDF/.env
 WorkingDirectory=/opt/Stirling-PDF
-ExecStart=/usr/bin/java -jar Stirling-PDF-0.23.1.jar
+#ExecStart=/usr/bin/java -jar Stirling-PDF-0.23.1.jar
+ExecStart=/usr/bin/java -jar echo $(ls /opt/Stirling-PDF/Stirling-PDF-*.jar | tail -1)
 ExecStop=/bin/kill -15 $MAINPID
 
 [Install]
@@ -91,15 +92,14 @@ WantedBy=multi-user.target
 EOF
 
 sudo systemctl daemon-reload
-sudo systemctl enable stirlingpdf.service
 sudo systemctl status stirlingpdf.service
 sudo systemctl start stirlingpdf.service
 sudo systemctl stop stirlingpdf.service
 sudo systemctl restart stirlingpdf.service
-sudo systemctl status stirlingpdf.service
+sudo systemctl status stirlingpdf.service | grep -e'Running' && sudo systemctl enable stirlingpdf.service
 
 echo checking what PID used port 8080
-fuser -n tcp 8080
+echo fuser -n tcp 8080
 ## to run manually ./gradlew bootRun
 ##  or
 ## java -jar /opt/Stirling-PDF/Stirling-PDF-*.jar
