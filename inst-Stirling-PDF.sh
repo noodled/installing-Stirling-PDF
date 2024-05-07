@@ -1,10 +1,10 @@
-
+#!/usr/bin/env bash
+# 2024 May 05
 echo Installing Stirling-PDF on a Debian or Ubuntu machine
 echo All files and PDFs exist either exclusively on the client side, 
 echo reside in server memory only during task execution, 
 echo or temporarily reside in a file solely for the execution of the task. 
 echo Any file downloaded by the user will have been deleted from the server by that point.
-# 2024 April 30
 sudo apt-get update -y
 sudo apt-get install -y git automake autoconf libtool libleptonica-dev pkg-config \
      zlib1g-dev make g++ openjdk-17-jdk python3 python3-pip
@@ -15,7 +15,7 @@ git clone https://github.com/agl/jbig2enc.git &&\
 cd jbig2enc &&\
 ./autogen.sh &&\
 ./configure &&\
-make &&\
+make -j $(NUMPROC) &&\
 sudo make install
 sudo apt-get install -y libreoffice-writer libreoffice-calc libreoffice-impress \
     unpaper ocrmypdf
@@ -34,7 +34,7 @@ sudo apt-get install -y libtiff5-dev libjpeg8-dev libopenjp2-7-dev zlib1g-dev \
     libharfbuzz-dev libfribidi-dev libxcb1-dev
 #installing latest 10.3
 python3 -m pip install --upgrade Pillow --no-binary :all:
-#important note Found existing installation: Pillow 7.0.0 - Can't uninstall 'Pillow'. No files were found to uninstall 
+#important note ubuntu 20.04.6 Found existing installation: Pillow 7.0.0 - Can't uninstall 'Pillow'. No files were found to uninstall 
 python3 -m pip install WeasyPrint
 popd -2
 cd ~/.git &&\
@@ -46,7 +46,7 @@ sudo mkdir /opt/Stirling-PDF &&\
 sudo mv ./build/libs/Stirling-PDF-*.jar /opt/Stirling-PDF/ &&\
 sudo mv scripts /opt/Stirling-PDF/ &&\
 echo "Scripts installed."
-echo installing english dutch french german spanish and italian ocr files
+echo installing english dutch french german spanish and italian Tesseract OCR files
 sudo apt-get install -y tesseract-ocr-eng tesseract-ocr-nld tesseract-ocr-fra tesseract-ocr-deu tesseract-ocr-spa tesseract-ocr-ita
 echo creating desktop icon
 location=$(pwd)/gradlew
@@ -67,7 +67,10 @@ EOF
 
 echo running as a service
 sudo touch /opt/Stirling-PDF/.env
-
+echo getting highest version jar into var
+LatestJAR=$(ls /opt/Stirling-PDF/Stirling-PDF-*.jar | tail -1 | cut -d'/' -f4)
+echo copying highest version jar into fixed name Stirling-PDF-latest.jar
+cp -f /opt/Stirling-PDF/$LatestJAR /opt/Stirling-PDF/Stirling-PDF-latest.jar
 cat <<EOF | sudo tee /etc/systemd/system/stirlingpdf.service
 [Unit]
 Description=Stirling-PDF service
@@ -83,8 +86,8 @@ Type=simple
 
 EnvironmentFile=/opt/Stirling-PDF/.env
 WorkingDirectory=/opt/Stirling-PDF
-#ExecStart=/usr/bin/java -jar Stirling-PDF-0.23.1.jar
-ExecStart=/usr/bin/java -jar echo $(ls /opt/Stirling-PDF/Stirling-PDF-*.jar | tail -1)
+#ExecStart=/usr/bin/java -jar Stirling-PDF-0.23.2.jar
+ExecStart=/usr/bin/java -jar Stirling-PDF-latest.jar
 ExecStop=/bin/kill -15 $MAINPID
 
 [Install]
@@ -99,6 +102,7 @@ sudo systemctl restart stirlingpdf.service
 sudo systemctl status stirlingpdf.service | grep -e'Running' && sudo systemctl enable stirlingpdf.service
 
 echo checking what PID used port 8080
+sleep 4
 echo fuser -n tcp 8080
 ## to run manually ./gradlew bootRun
 ##  or
@@ -109,5 +113,3 @@ echo fuser -n tcp 8080
 # folderscanning :) https://github.com/Stirling-Tools/Stirling-PDF/blob/main/FolderScanning.md
 # info about OCR https://github.com/Stirling-Tools/Stirling-PDF/blob/main/HowToUseOCR.md#ocr-language-packs-and-setup
 # info if some local languages are desired https://github.com/Stirling-Tools/Stirling-PDF/blob/main/HowToAddNewLanguage.md
-
-
